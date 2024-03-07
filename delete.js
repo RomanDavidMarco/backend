@@ -4,7 +4,7 @@ const { CosmosClient } = require("@azure/cosmos");
 const endpoint = "https://atc-2024-reformed-cosmos-account.documents.azure.com:443/";
 const key = "NBLt1z2m8EgAyidEVYzLxrCckcYmN40pPg1NuCyerzxkvnsaOw0AJYOKYdXg8IhlspxQtMpWaBmmACDbAddPBw==";
 const databaseId = "atc-2024-reformed-database";
-const containerId = "organisations"; // Container ID for operations
+const containerId = "Organisations"; // Container ID for operations
 
 // Initialize CosmosClient
 const client = new CosmosClient({ endpoint, key });
@@ -39,6 +39,6 @@ async function createContainer() {
 }
 
 // Example usage
-// Uncomment the function you want to use
-// deleteContainer();
- createContainer();
+// Uncomment the function you want to use and change the 'const containerId = "your-choice"'- Container ID for operations
+//deleteContainer();
+//createContainer();

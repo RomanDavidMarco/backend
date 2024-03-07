@@ -22,53 +22,62 @@ app.use((req, res, next) => {
 });
 
 app.post('/register', async (req, res) => {
-  // Including email in the destructuring assignment
   const { organizationName, headquartersAddress, email } = req.body;
 
-  // Checking for the presence of the email along with other required fields
-  if (!headquartersAddress) {
-    return res.status(400).json({ message: 'HQ is required.' });
-  }
-  else if (!organizationName)
+  if (!organizationName) {
     return res.status(400).json({ message: 'Organization name is required.' });
-  else if (!email)
+  } else if (!headquartersAddress) {
+    return res.status(400).json({ message: 'Headquarters address is required.' });
+  } else if (!email) {
     return res.status(400).json({ message: 'Email is required.' });
-
+  }
 
   try {
-    // Adjusting the query to check for the email address instead of the organization name
-    const { resources: existingRegistrations } = await masterContainer.items
+    // Check if the organization already exists based on the organizationName
+    const { resources: existingOrganizations } = await masterContainer.items
       .query({
-        query: "SELECT * FROM c WHERE c.email = @email",
-        parameters: [{ name: "@email", value: email }]
+        query: "SELECT * FROM c WHERE c.organizationName = @organizationName",
+        parameters: [{ name: "@organizationName", value: organizationName }]
       })
       .fetchAll();
 
-    if (existingRegistrations.length > 0) {
-      // If an entry with the provided email already exists, indicating the person is already registered
-      return res.status(409).json({ message: 'A registration with the provided email already exists.' });
+    if (existingOrganizations.length > 0) {
+      // If an entry with the provided organization name already exists
+      return res.status(409).json({ message: 'An organization with the provided name already exists.' });
     }
 
-    // The rest of the registration process remains unchanged
-    const containerDefinition = {
-      id: organizationName,
-      partitionKey: { paths: ["/id"] }
-    };
-
-    await database.containers.createIfNotExists(containerDefinition);
-
-    // Including the email in the newItem object
-    const newItem = {
-      id: organizationName, // Consider using a GUID or similar for unique IDs instead
+    // Proceed with the registration since the organization does not exist
+    const organizationData = {
+      id: organizationName, // Using the organization name as a unique identifier might lead to issues if names are not unique. Consider using a GUID or similar.
       organizationName,
       headquartersAddress,
-      email, // Now storing the email address with the registration
-      registeredAt: DateTime.now().toISO()
+      registeredAt: DateTime.now().toISO(),
     };
 
-    const { resource: createdItem } = await masterContainer.items.create(newItem);
+    await masterContainer.items.create(organizationData);
 
-    res.status(201).json({ message: 'Organization registered successfully', organization: createdItem });
+    // Attempt to create a new container for the organization if it does not exist
+    await database.containers.createIfNotExists({
+      id: organizationName,
+      partitionKey: { paths: ["/id"] }
+    });
+
+    // Reference to the newly created container
+    const newContainer = database.container(organizationName);
+
+    // Including an additional entry "organisationAdmin"
+    const newItem = {
+      id: email, // Consider using a more unique ID for each entry.
+      organizationName,
+      headquartersAddress,
+      email,
+      registeredAt: DateTime.now().toISO(),
+      organisationAdmin: true
+    };
+
+    await newContainer.items.create(newItem);
+
+    res.status(201).json({ message: 'Organization registered successfully', organization: organizationData });
   } catch (error) {
     console.error('Error while registering organization:', error);
     res.status(500).json({ message: 'Failed to register organization.' });
@@ -89,8 +98,32 @@ app.get('/organisations', async (req, res) => {
   }
 });
 
+app.get('/all-contents', async (req, res) => {
+  try {
+    // List all containers in the database
+    const { resources: containers } = await database.containers.readAll().fetchAll();
+    
+    let allData = [];
+
+    // Query each container for its items
+    for (const containerDef of containers) {
+      const container = database.container(containerDef.id);
+      const { resources: items } = await container.items
+        .query("SELECT * FROM c")
+        .fetchAll();
+      
+      allData.push({ container: containerDef.id, items });
+    }
+
+    res.status(200).json(allData);
+  } catch (error) {
+    console.error('Error fetching all contents:', error);
+    res.status(500).json({ message: 'Failed to fetch all contents.' });
+  }
+});
+
 app.get('/', (req, res) => {
-  res.send('Server is running. Use the /register endpoint to register an organization.');
+  res.send('Server is running.');
 });
 
 app.listen(port, () => console.log(`Server is running on http://localhost:${port}`));
