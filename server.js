@@ -19,14 +19,25 @@ const container = database.container(containerName);
 app.use(express.json());
 
 app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
+  res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
 
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+// Route to get all organisations
+app.get('/organisations', async (req, res) => {
+  try {
+    const { resources: organisations } = await container.items
+      .query("SELECT * from c")
+      .fetchAll();
+    res.status(200).json(organisations);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
 
+app.get('/', (req, res) => {
+  res.send('Server is running. Access the /organisations endpoint to view the data.');
+});
 
 app.listen(port, () => console.log(`Server is running on http://localhost:${port}`));
-
