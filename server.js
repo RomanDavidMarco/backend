@@ -7,7 +7,7 @@ const port = 3000;
 const url = 'https://atc-2024-reformed-cosmos-account.documents.azure.com/';
 const key = 'NBLt1z2m8EgAyidEVYzLxrCckcYmN40pPg1NuCyerzxkvnsaOw0AJYOKYdXg8IhlspxQtMpWaBmmACDbAddPBw==';
 const databaseName = 'atc-2024-reformed-database';
-const masterContainerName = 'organisations';
+const masterContainerName = 'Organisations';
 
 const client = new CosmosClient({ endpoint: url, key: key });
 const database = client.database(databaseName);
