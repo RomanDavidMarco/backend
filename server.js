@@ -22,39 +22,46 @@ app.use((req, res, next) => {
 });
 
 app.post('/register', async (req, res) => {
-  const { organizationName, headquartersAddress } = req.body;
+  // Including email in the destructuring assignment
+  const { organizationName, headquartersAddress, email } = req.body;
 
-  if (!organizationName || !headquartersAddress) {
-    return res.status(400).json({ message: 'Organization name and headquarters address are required.' });
+  // Checking for the presence of the email along with other required fields
+  if (!organizationName || !headquartersAddress || !email) {
+    return res.status(400).json({ message: 'Organization name, headquarters address, and email are required.' });
   }
 
   try {
-    // Check if the "Organisations" container already contains this organization
-    const { resources: existingOrganizations } = await masterContainer.items
-      .query({ query: "SELECT * FROM c WHERE c.organizationName = @name", parameters: [{ name: "@name", value: organizationName }] })
+    // Adjusting the query to check for the email address instead of the organization name
+    const { resources: existingRegistrations } = await masterContainer.items
+      .query({
+        query: "SELECT * FROM c WHERE c.email = @email",
+        parameters: [{ name: "@email", value: email }]
+      })
       .fetchAll();
 
-    if (existingOrganizations.length > 0) {
-      // Organization already exists in the master container
-      return res.status(409).json({ message: 'Organization already exists.' });
+    if (existingRegistrations.length > 0) {
+      // If an entry with the provided email already exists, indicating the person is already registered
+      return res.status(409).json({ message: 'A registration with the provided email already exists.' });
     }
 
-    // Create a new container for the organization if it does not exist
+    // The rest of the registration process remains unchanged
     const containerDefinition = {
       id: organizationName,
-      partitionKey: { paths: ["/id"] } // Adjust the partitionKey according to your data model
+      partitionKey: { paths: ["/id"] }
     };
-    const containerOptions = { offerThroughput: 400 }; // Set throughput as per your requirement
+    const containerOptions = { offerThroughput: 400 };
 
     await database.containers.createIfNotExists(containerDefinition, containerOptions);
 
-    // Insert the new organization's details into the "Organisations" container
+    // Including the email in the newItem object
     const newItem = {
-      id: organizationName,
+      id: organizationName, // Consider using a GUID or similar for unique IDs instead
       organizationName,
       headquartersAddress,
+      email, // Now storing the email address with the registration
       registeredAt: DateTime.now().toISO()
     };
+
     const { resource: createdItem } = await masterContainer.items.create(newItem);
 
     res.status(201).json({ message: 'Organization registered successfully', organization: createdItem });
@@ -63,6 +70,7 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Failed to register organization.' });
   }
 });
+
 
 // Optionally, add the route to list all organizations
 app.get('/organisations', async (req, res) => {
