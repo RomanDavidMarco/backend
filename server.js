@@ -7,7 +7,7 @@ const port = 3000;
 const url = 'https://atc-2024-reformed-cosmos-account.documents.azure.com/';
 const key = 'NBLt1z2m8EgAyidEVYzLxrCckcYmN40pPg1NuCyerzxkvnsaOw0AJYOKYdXg8IhlspxQtMpWaBmmACDbAddPBw==';
 const databaseName = 'atc-2024-reformed-database';
-const masterContainerName = 'Organisations';
+const masterContainerName = 'Juice';
 
 const client = new CosmosClient({ endpoint: url, key: key });
 const database = client.database(databaseName);
@@ -26,9 +26,14 @@ app.post('/register', async (req, res) => {
   const { organizationName, headquartersAddress, email } = req.body;
 
   // Checking for the presence of the email along with other required fields
-  if (!organizationName || !headquartersAddress || !email) {
-    return res.status(400).json({ message: 'Organization name, headquarters address, and email are required.' });
+  if (!headquartersAddress) {
+    return res.status(400).json({ message: 'HQ is required.' });
   }
+  else if (!organizationName)
+    return res.status(400).json({ message: 'Organization name is required.' });
+  else if (!email)
+    return res.status(400).json({ message: 'Email is required.' });
+
 
   try {
     // Adjusting the query to check for the email address instead of the organization name
