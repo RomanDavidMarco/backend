@@ -1,69 +1,80 @@
 const express = require('express');
 const router = express.Router();
 const { DateTime } = require('luxon');
+const bcrypt = require('bcrypt');
 const { client, database, masterContainer } = require('./CosmosSetup');
 
+const saltRounds = 10; // Cost factor for hashing the password
+
 router.post('/register', async (req, res) => {
-    const { organizationName, headquartersAddress, email } = req.body;
+    const { organizationName, headquartersAddress, email, password } = req.body;
 
-  if (!organizationName) {
-    return res.status(400).json({ message: 'Organization name is required.' });
-  } else if (!headquartersAddress) {
-    return res.status(400).json({ message: 'Headquarters address is required.' });
-  } else if (!email) {
-    return res.status(400).json({ message: 'Email is required.' });
-  }
-
-  try {
-    // Check if the organization already exists based on the organizationName
-    const { resources: existingOrganizations } = await masterContainer.items
-      .query({
-        query: "SELECT * FROM c WHERE c.organizationName = @organizationName",
-        parameters: [{ name: "@organizationName", value: organizationName }]
-      })
-      .fetchAll();
-
-    if (existingOrganizations.length > 0) {
-      // If an entry with the provided organization name already exists
-      return res.status(409).json({ message: 'An organization with the provided name already exists.' });
+    if (!organizationName) {
+        return res.status(400).json({ message: 'Organization name is required.' });
+    } else if (!headquartersAddress) {
+        return res.status(400).json({ message: 'Headquarters address is required.' });
+    } else if (!email) {
+        return res.status(400).json({ message: 'Email is required.' });
+    } else if (!password) {
+        return res.status(400).json({ message: 'Password is required.' });
     }
 
-    // Proceed with the registration since the organization does not exist
-    const organizationData = {
-      id: organizationName, // Using the organization name as a unique identifier might lead to issues if names are not unique. Consider using a GUID or similar.
-      organizationName,
-      headquartersAddress,
-      registeredAt: DateTime.now().toISO(),
-    };
+    try {
+        // Check if the organization already exists based on the organizationName
+        const { resources: existingOrganizations } = await masterContainer.items
+            .query({
+                query: "SELECT * FROM c WHERE c.organizationName = @organizationName",
+                parameters: [{ name: "@organizationName", value: organizationName }]
+            })
+            .fetchAll();
 
-    await masterContainer.items.create(organizationData);
+        if (existingOrganizations.length > 0) {
+            // If an entry with the provided organization name already exists
+            return res.status(409).json({ message: 'An organization with the provided name already exists.' });
+        }
 
-    // Attempt to create a new container for the organization if it does not exist
-    await database.containers.createIfNotExists({
-      id: organizationName,
-      partitionKey: { paths: ["/id"] }
-    });
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Reference to the newly created container
-    const newContainer = database.container(organizationName);
+        // Proceed with the registration since the organization does not exist
+        const organizationData = {
+            id: email,
+            organizationName,
+            registeredAt: DateTime.now().toISO(),
+        };
 
-    // Including an additional entry "organisationAdmin"
-    const newItem = {
-      id: email, // Consider using a more unique ID for each entry.
-      organizationName,
-      headquartersAddress,
-      email,
-      registeredAt: DateTime.now().toISO(),
-      organisationAdmin: true
-    };
+        await masterContainer.items.create(organizationData);
 
-    await newContainer.items.create(newItem);
+        // Attempt to create a new container for the organization if it does not exist
+        await database.containers.createIfNotExists({
+            id: organizationName,
+            partitionKey: { paths: ["/id"] }
+        });
 
-    res.status(201).json({ message: 'Organization registered successfully', organization: organizationData });
-  } catch (error) {
-    console.error('Error while registering organization:', error);
-    res.status(500).json({ message: 'Failed to register organization.' });
-  }
+        // Reference to the newly created container
+        const newContainer = database.container(organizationName);
+
+        // Including an additional entry "organisationAdmin" with the hashed password
+        const newItem = {
+            id: email,
+            organizationName,
+            headquartersAddress,
+            email,
+            password: hashedPassword, // Store the hashed password
+            roles:["organizationAdmin","departmentManager","projectManager"]
+            // employee: false,
+            //organisationAdmin: true,
+            //departmentManager: false,
+            //projectManager: false
+        };
+        
+        await newContainer.items.create(newItem);
+
+        res.status(201).json({ message: 'Organization registered successfully', organization: organizationData });
+    } catch (error) {
+        console.error('Error while registering organization:', error);
+        res.status(500).json({ message: 'Failed to register organization.' });
+    }
 });
 
 module.exports = router;

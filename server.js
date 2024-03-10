@@ -11,11 +11,13 @@ app.use(corsMiddleware);
 const organizationRoutes = require('./ServerRoutes/OrganisationRoutes');
 const registerRoutes = require('./ServerRoutes/RegisterRoutes');
 const contentRoutes = require('./ServerRoutes/ContentRoutes');
+const loginRoutes = require('./ServerRoutes/LoginRoutes');
 
 // Use routes
 app.use(organizationRoutes);
 app.use(registerRoutes);
 app.use(contentRoutes);
+app.use(loginRoutes);
 
 app.get('/', (req, res) => {
   res.send('Server is running.');
