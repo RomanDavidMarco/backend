@@ -45,7 +45,7 @@ router.post('/register', async (req, res) => {
         };
         const employeeLink = generateAffiliateLink(organizationName,organizationData.registeredAt);
         organizationData.employeeLink=employeeLink;
-        console.log('LINK : ', organizationData.employeeLink);
+        console.log('LINK : ', organizationData.employeeLink);// can be deleted or commented out
         await masterContainer.items.create(organizationData);
 
         // Attempt to create a new container for the organization if it does not exist
@@ -81,13 +81,14 @@ router.post('/register', async (req, res) => {
 });
 
 function generateAffiliateLink(organizationName, registratedAt) {
-    const randomString = uuidv4().slice(0, 6); // Generate random string of 6 characters
+    const randomStartString = uuidv4().slice(0, 6); // Generate random string of 6 characters
+    const randomEndString = uuidv4().slice(0, 4); // Generate another random string of 4 characters
     const formattedDate = registratedAt.split('T')[0]; // Extract date portion from ISO string
     const year = formattedDate.slice(0, 4);
     const month = formattedDate.slice(5, 7);
     const day = formattedDate.slice(8, 10);
     const firstTwoLetters = organizationName.slice(0, 2).toUpperCase(); // Get first two letters of company name
-    return `/${randomString}${firstTwoLetters}${year}${month}${day}`;
+    return `/${randomStartString}${firstTwoLetters}${year}${month}${day}${randomEndString}`;
 }
 
 module.exports = router;
