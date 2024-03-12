@@ -12,12 +12,14 @@ const organizationRoutes = require('./ServerRoutes/OrganisationRoutes');
 const registerRoutes = require('./ServerRoutes/RegisterRoutes');
 const contentRoutes = require('./ServerRoutes/ContentRoutes');
 const loginRoutes = require('./ServerRoutes/LoginRoutes');
+const employeeRegisterRoutes = require('./ServerRoutes/EmployeeRegisterRoutes');
 
 // Use routes
 app.use(organizationRoutes);
 app.use(registerRoutes);
 app.use(contentRoutes);
 app.use(loginRoutes);
+app.use(employeeRegisterRoutes);
 
 app.get('/', (req, res) => {
   res.send('Server is running.');
