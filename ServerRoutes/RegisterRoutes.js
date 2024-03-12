@@ -3,6 +3,7 @@ const router = express.Router();
 const { DateTime } = require('luxon');
 const bcrypt = require('bcrypt');
 const { client, database, masterContainer } = require('./CosmosSetup');
+const { v4: uuidv4 } = require('uuid');
 
 const saltRounds = 10; // Cost factor for hashing the password
 
@@ -42,7 +43,9 @@ router.post('/register', async (req, res) => {
             organizationName,
             registeredAt: DateTime.now().toISO(),
         };
-
+        const employeeLink = generateAffiliateLink(organizationName,organizationData.registeredAt);
+        organizationData.employeeLink=employeeLink;
+        console.log('LINK : ', organizationData.employeeLink);
         await masterContainer.items.create(organizationData);
 
         // Attempt to create a new container for the organization if it does not exist
@@ -76,5 +79,15 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ message: 'Failed to register organization.' });
     }
 });
+
+function generateAffiliateLink(organizationName, registratedAt) {
+    const randomString = uuidv4().slice(0, 6); // Generate random string of 6 characters
+    const formattedDate = registratedAt.split('T')[0]; // Extract date portion from ISO string
+    const year = formattedDate.slice(0, 4);
+    const month = formattedDate.slice(5, 7);
+    const day = formattedDate.slice(8, 10);
+    const firstTwoLetters = organizationName.slice(0, 2).toUpperCase(); // Get first two letters of company name
+    return `/${randomString}${firstTwoLetters}${year}${month}${day}`;
+}
 
 module.exports = router;
