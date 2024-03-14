@@ -88,7 +88,7 @@ function generateAffiliateLink(organizationName, registratedAt) {
     const month = formattedDate.slice(5, 7);
     const day = formattedDate.slice(8, 10);
     const firstTwoLetters = organizationName.slice(0, 2).toUpperCase(); // Get first two letters of company name
-    return `/${randomStartString}${firstTwoLetters}${year}${month}${day}${randomEndString}`;
+    return `${randomStartString}${firstTwoLetters}${year}${month}${day}${randomEndString}`;
 }
 
 module.exports = router;

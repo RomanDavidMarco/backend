@@ -8,16 +8,17 @@ const saltRounds = 10; // Cost factor for hashing the password
 
 // Route handler for the employee registration page
 router.post('/empregister', async (req, res) => {
+    
     const { referral } = req.query;
+    console.log(referral);
     const regex = /^.{8}\d{8}.{4}$/;
     if (!regex.test(referral)) {
-        return res.redirect('http://localhost:5173/');
-        console.log('REFF: ', referral);
+        return res.status(400).json({ message: 'Not valid referral form.' });
     }
     // Validate referral code (you can add your validation logic here)
     const currentOrg= await isValidReferral(referral);
     if (currentOrg==null) {
-        return res.redirect('http://localhost:5173/');
+        return res.status(400).json({ message: 'Referral expired.' });
     }
 
     const { name, email, password } = req.body;
@@ -33,11 +34,11 @@ router.post('/empregister', async (req, res) => {
     try {
         // Check if the user already exists in the organization based on the email
         const querySpecUser = {
-                query: 'SELECT VALUE COUNT(1) FROM c WHERE c.email = @email',
-                parameters: [{ name: '@email', value: email }]
+                query: 'SELECT TOP 1 * FROM c WHERE c.id = @id',
+                parameters: [{ name: '@id', value: email }]
             };
-        const { resources: existingUser } = await client.database(database).container(currentOrg).items.query(querySpecUser).fetchAll();
-        if (existingUser > 0) {
+        const { resources: existingUser } = await database.container(currentOrg).items.query(querySpecUser).fetchAll();
+        if (existingUser.length > 0) {
             // If an entry with the provided organization name already exists
             return res.status(409).json({ message: 'An user with the provided email already exists.' });
         }
@@ -54,12 +55,13 @@ router.post('/empregister', async (req, res) => {
             roles:["employee"]
         };
 
-        await currentOrg.items.create(employeeData);
+        await database.container(currentOrg).items.create(employeeData);
         res.status(201).json({ message: 'Employee registered successfully', employee: employeeData });
     } catch (error) {
         console.error('Error while registering organization:', error);
         res.status(500).json({ message: 'Failed to register organization.' });
     }
+    
 });
 
 
@@ -69,11 +71,12 @@ async function isValidReferral(referral) {
     try{
     // Search how many times the referral appears in the database, if the count is greater than 0 it means is valid
     const querySpecRef = {
-        query: 'SELECT VALUE COUNT(1) FROM c WHERE c.employeeLink = @referralCode',
-        parameters: [{ name: '@referralCode', value: referral }]
+        query: 'SELECT TOP 1 * FROM c WHERE c.employeeLink = @employeeLink',
+        parameters: [{ name: '@employeeLink', value: referral }]
     };
 
-    const { resources: results } = await client.database(database).container(masterContainer).items.query(querySpecRef).fetchAll();
+    const { resources: results } = await masterContainer.items.query(querySpecRef).fetchAll();
+    console.log(results[0].organizationName);
     if (results.length > 0) {
         return results[0].organizationName;
     } else {
