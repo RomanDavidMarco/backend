@@ -8,7 +8,7 @@ const { v4: uuidv4 } = require('uuid');
 const saltRounds = 10; // Cost factor for hashing the password
 
 router.post('/register', async (req, res) => {
-    const { organizationName, headquartersAddress, email, password } = req.body;
+    const { name, organizationName, headquartersAddress, email, password } = req.body;
 
     if (!organizationName) {
         return res.status(400).json({ message: 'Organization name is required.' });
@@ -18,13 +18,15 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ message: 'Email is required.' });
     } else if (!password) {
         return res.status(400).json({ message: 'Password is required.' });
+    }else if (!name) {
+        return res.status(400).json({ message: 'Name is required.' });
     }
 
     try {
         // Check if the organization already exists based on the organizationName
         const { resources: existingOrganizations } = await masterContainer.items
             .query({
-                query: "SELECT * FROM c WHERE c.organizationName = @organizationName",
+                query: "SELECT * FROM c WHERE c.id = @organizationName",
                 parameters: [{ name: "@organizationName", value: organizationName }]
             })
             .fetchAll();
@@ -39,13 +41,13 @@ router.post('/register', async (req, res) => {
 
         // Proceed with the registration since the organization does not exist
         const organizationData = {
-            id: email,
-            organizationName,
+            id: organizationName,
+            headquartersAddress: headquartersAddress,
             registeredAt: DateTime.now().toISO(),
         };
         const employeeLink = generateAffiliateLink(organizationName,organizationData.registeredAt);
         organizationData.employeeLink=employeeLink;
-        console.log('LINK : ', organizationData.employeeLink);// can be deleted or commented out
+        
         await masterContainer.items.create(organizationData);
 
         // Attempt to create a new container for the organization if it does not exist
@@ -60,9 +62,7 @@ router.post('/register', async (req, res) => {
         // Including an additional entry "organisationAdmin" with the hashed password
         const newItem = {
             id: email,
-            organizationName,
-            headquartersAddress,
-            email,
+            name: name,
             password: hashedPassword, // Store the hashed password
             roles:["organizationAdmin","departmentManager","projectManager"]
             // employee: false,

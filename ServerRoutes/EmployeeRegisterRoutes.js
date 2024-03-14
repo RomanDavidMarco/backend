@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const { client, database, masterContainer } = require('./CosmosSetup');
@@ -8,7 +9,7 @@ const saltRounds = 10; // Cost factor for hashing the password
 
 // Route handler for the employee registration page
 router.post('/empregister', async (req, res) => {
-    
+    console.log("IM HERE");
     const { referral } = req.query;
     console.log(referral);
     const regex = /^.{8}\d{8}.{4}$/;
@@ -17,6 +18,7 @@ router.post('/empregister', async (req, res) => {
     }
     // Validate referral code (you can add your validation logic here)
     const currentOrg= await isValidReferral(referral);
+    console.log(currentOrg);
     if (currentOrg==null) {
         return res.status(400).json({ message: 'Referral expired.' });
     }
@@ -71,14 +73,14 @@ async function isValidReferral(referral) {
     try{
     // Search how many times the referral appears in the database, if the count is greater than 0 it means is valid
     const querySpecRef = {
-        query: 'SELECT TOP 1 * FROM c WHERE c.employeeLink = @employeeLink',
+        query: 'SELECT * FROM c WHERE c.employeeLink = @employeeLink',
         parameters: [{ name: '@employeeLink', value: referral }]
     };
 
     const { resources: results } = await masterContainer.items.query(querySpecRef).fetchAll();
     console.log(results[0].organizationName);
     if (results.length > 0) {
-        return results[0].organizationName;
+        return results[0].id;
     } else {
         return null; // Return null if referral code not found
     }
