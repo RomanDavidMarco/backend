@@ -22,6 +22,23 @@ async function deleteContainer() {
     }
 }
 
+async function deleteAllContainers() {
+    try {
+        const database = client.database(databaseId);
+        
+        // Retrieve all containers in the database
+        const { resources: containers } = await database.containers.readAll().fetchAll();
+        
+        // Iterate over each container and delete it
+        for (const container of containers) {
+            await database.container(container.id).delete();
+            console.log(`Container ${container.id} deleted successfully`);
+        }
+    } catch (error) {
+        console.error("Error deleting containers:", error);
+    }
+}
+
 // Function to create a container
 async function createContainer() {
     try {
@@ -42,3 +59,4 @@ async function createContainer() {
 // Uncomment the function you want to use and change the 'const containerId = "your-choice"'- Container ID for operations
 //deleteContainer();
 //createContainer();
+//deleteAllContainers();

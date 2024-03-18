@@ -6,7 +6,7 @@ const { client, database, masterContainer } = require('./CosmosSetup');
 const router = express.Router();
 
 // It's critical to keep your secret key secure; consider using environment variables
-const SECRET_KEY ='HJc5wPb2LrT8eZsG9FvU3YqXjN6mKdA1RhIoOaDpQnWxSeFtRyGuVhJc5wPb2LrT';
+const SECRET_KEY =process.env.SECRET_KEY;
 
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
